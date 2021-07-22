@@ -28,6 +28,8 @@ int main(int argc, char ** argv) {
         cerr << "ERROR: Could not open webcam" << endl;
         return 1;
     }
+    camera.set(CV_CAP_PROP_FRAME_WIDTH, 640);
+    camera.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
 
     namedWindow("Camera", CV_WINDOW_AUTOSIZE);
 
