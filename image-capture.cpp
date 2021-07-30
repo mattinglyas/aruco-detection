@@ -13,12 +13,12 @@ int main(int argc, char ** argv) {
         std::cerr << "ERROR: Could not open webcam" << std::endl;
         return 1;
     }
-    camera.set(CV_CAP_PROP_FRAME_WIDTH, 640);
-    camera.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
+    camera.set(cv::CAP_PROP_FRAME_WIDTH, 640);
+    camera.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
     
     int num = 0;
 
-    cv::namedWindow("Camera", CV_WINDOW_AUTOSIZE);
+    cv::namedWindow("Camera", cv::WINDOW_AUTOSIZE);
 
     for (;;) {
         cv::Mat frame;

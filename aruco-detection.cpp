@@ -17,8 +17,6 @@
 
 /* Default values for certain settings */
 #define DEF_CALIBRATION "./calibration.yml"
-#define DEF_WIDTH (640)
-#define DEF_HEIGHT (480)
 #define DEF_MARKER_LENGTH (0.1f)
 
 // from https://docs.opencv.org/3.4/df/d4a/tutorial_charuco_detection.html
@@ -41,8 +39,11 @@ int main(int argc, char ** argv) {
      * 
      *************************************************************************/
     char * calibration_filename = (char*)DEF_CALIBRATION;
-    int width = DEF_WIDTH;
-    int height = DEF_HEIGHT;
+    char * input_filename = nullptr;
+    int conf_width = 0;
+    int conf_height = 0;
+    int read_width = 0;
+    int read_height = 0;
     float marker_length = DEF_MARKER_LENGTH;
     cv::Mat camera_matrix;
     cv::Mat dist_coeffs;
@@ -51,7 +52,7 @@ int main(int argc, char ** argv) {
     cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
 
     /*************************************************************************
-     * Parse arguments from command line (this is a pretty bad way to do arg
+     * Parse arguments from command line (this is a very bad way to do arg
      *  parsing. TODO look into a more elegant way to do command line args)
      * 
      *************************************************************************/
@@ -61,6 +62,15 @@ int main(int argc, char ** argv) {
 
         if (argc > 2) {
             marker_length = std::stof(argv[2]);
+
+            if (argc > 3) {
+                input_filename = argv[3];
+            
+                if (argc > 5) {
+                    read_width = std::atoi(argv[4]);
+                    read_height = std::atoi(argv[5]);
+                }
+            }
         }
     }
 
@@ -69,19 +79,36 @@ int main(int argc, char ** argv) {
      * 
      *************************************************************************/
 
-    if (readCameraParameters(calibration_filename, camera_matrix, dist_coeffs, width, height) == false) {
+    if (readCameraParameters(calibration_filename, camera_matrix, dist_coeffs, conf_width, conf_height) == false) {
         std::cerr << "ERROR: Invalid calibration file " << calibration_filename << std::endl;
         return 1;
     } 
+    
+    /* WARNING this assumes that the fov of the camera is the same */
+    if (read_width != 0) {
+        /* Scale the camera matrix by the target resolution */
+        double scale = double(read_width) / double(conf_width); 
+        camera_matrix = camera_matrix * scale;
+    } else {
+        /* Assume same resolution as config */
+        read_width = conf_width;
+        read_height = conf_height;
+    }
 
-    cv::VideoCapture camera(0);
+    cv::VideoCapture camera;
+    if (input_filename != nullptr) {
+        camera = cv::VideoCapture(input_filename);
+    } else {
+        camera = cv::VideoCapture(0);
+    }
+
     if (!camera.isOpened()) {
         std::cerr << "ERROR: Could not open webcam" << std::endl;
         return 1;
     }
     
-    camera.set(cv::CAP_PROP_FRAME_WIDTH, width);
-    camera.set(cv::CAP_PROP_FRAME_HEIGHT, height);
+    camera.set(cv::CAP_PROP_FRAME_WIDTH, read_width);
+    camera.set(cv::CAP_PROP_FRAME_HEIGHT, read_height);
     
     cv::namedWindow("Camera", cv::WINDOW_AUTOSIZE);
     
@@ -98,6 +125,10 @@ int main(int argc, char ** argv) {
 
         cv::Mat frame;
         camera >> frame;
+
+        if (frame.empty()) {
+            return 0;
+        }
 
 
         std::vector<std::vector<cv::Point2f>> marker_corners, rejected_candidates;
