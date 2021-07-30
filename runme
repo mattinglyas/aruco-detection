@@ -1,1 +1,1 @@
-./aruco-detection
+./aruco-detection ./calibration640x480.yml 0.070

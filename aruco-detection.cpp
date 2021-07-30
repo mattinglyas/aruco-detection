@@ -9,64 +9,156 @@
 #include <opencv2/core/utility.hpp>
 #include <opencv2/core/types.hpp>
 
+#include <stdio.h>
 #include <iostream>
 #include <string.h>
 #include <fstream>
 #include <sstream>
 
-using namespace std;
-using namespace cv;
+/* Default values for certain settings */
+#define DEF_CALIBRATION "./calibration.yml"
+#define DEF_WIDTH (640)
+#define DEF_HEIGHT (480)
+#define DEF_MARKER_LENGTH (0.1f)
+
+// from https://docs.opencv.org/3.4/df/d4a/tutorial_charuco_detection.html
+static bool readCameraParameters(std::string filename, cv::Mat& camera_matrix, cv::Mat& distortion_coefficients, int &width, int &height) {
+    cv::FileStorage fs(filename, cv::FileStorage::READ);
+    if (!fs.isOpened()) {
+        return false;
+    }
+    fs["camera_matrix"] >> camera_matrix;
+    fs["distortion_coefficients"] >> distortion_coefficients;
+    fs["image_width"] >> width;
+    fs["image_height"] >> height;
+    return (camera_matrix.size() == cv::Size(3,3));
+}
 
 int main(int argc, char ** argv) {
-    Mat marker_image;
 
-    Ptr<aruco::Dictionary> dictionary = aruco::getPredefinedDictionary(aruco::DICT_6X6_250);
-    Ptr<aruco::DetectorParameters> parameters = aruco::DetectorParameters::create();
+    /*************************************************************************
+     * Define parameters and constants
+     * 
+     *************************************************************************/
+    char * calibration_filename = (char*)DEF_CALIBRATION;
+    int width = DEF_WIDTH;
+    int height = DEF_HEIGHT;
+    float marker_length = DEF_MARKER_LENGTH;
+    cv::Mat camera_matrix;
+    cv::Mat dist_coeffs;
+    
+    cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
+    cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
 
-    VideoCapture camera(0);
+    /*************************************************************************
+     * Parse arguments from command line (this is a pretty bad way to do arg
+     *  parsing. TODO look into a more elegant way to do command line args)
+     * 
+     *************************************************************************/
+
+    if (argc > 1) {
+        calibration_filename = argv[1];
+
+        if (argc > 2) {
+            marker_length = std::stof(argv[2]);
+        }
+    }
+
+    /*************************************************************************
+     * Read calibration file and open camera
+     * 
+     *************************************************************************/
+
+    if (readCameraParameters(calibration_filename, camera_matrix, dist_coeffs, width, height) == false) {
+        std::cerr << "ERROR: Invalid calibration file " << calibration_filename << std::endl;
+        return 1;
+    } 
+
+    cv::VideoCapture camera(0);
     if (!camera.isOpened()) {
-        cerr << "ERROR: Could not open webcam" << endl;
+        std::cerr << "ERROR: Could not open webcam" << std::endl;
         return 1;
     }
-    camera.set(CV_CAP_PROP_FRAME_WIDTH, 640);
-    camera.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
-
-    namedWindow("Camera", CV_WINDOW_AUTOSIZE);
+    
+    camera.set(cv::CAP_PROP_FRAME_WIDTH, width);
+    camera.set(cv::CAP_PROP_FRAME_HEIGHT, height);
+    
+    cv::namedWindow("Camera", cv::WINDOW_AUTOSIZE);
+    
+    /*************************************************************************
+     * Detect aruco markers and run pose estimation
+     * 
+     *************************************************************************/
 
     while(true) {
+        /* Used in profiling performance */
         struct timespec begin, end;
         double wall_time;
         clock_gettime(CLOCK_MONOTONIC, &begin);
 
-        Mat frame;
+        cv::Mat frame;
         camera >> frame;
 
-        vector<vector<Point2f>> marker_corners, rejected_candidates;
-        vector<int> marker_ids;
 
-        detectMarkers(frame, dictionary, marker_corners, marker_ids, parameters, rejected_candidates);
+        std::vector<std::vector<cv::Point2f>> marker_corners, rejected_candidates;
+        std::vector<int> marker_ids;
 
-        for (int i = 0; i < marker_ids.size(); i++) {
-            line(frame, marker_corners[i][0], marker_corners[i][1], Scalar(0,255,0), 1);
-            line(frame, marker_corners[i][1], marker_corners[i][2], Scalar(0,255,0), 1);
-            line(frame, marker_corners[i][2], marker_corners[i][3], Scalar(0,255,0), 1);
-            line(frame, marker_corners[i][3], marker_corners[i][0], Scalar(0,255,0), 1);
+        cv::aruco::detectMarkers(
+            frame, 
+            dictionary, 
+            marker_corners, 
+            marker_ids, 
+            parameters, 
+            rejected_candidates
+        );
 
-            stringstream stream;
-            stream << marker_ids[i];
-            putText(frame, stream.str(), marker_corners[i][0], FONT_HERSHEY_SIMPLEX, 1, Scalar(0,255,0), 1, LINE_AA);
+        /* Draw and run pose estimation if markers were detected in frame */
+        if (marker_ids.size() > 0) {
+            cv::aruco::drawDetectedMarkers(
+                frame, 
+                marker_corners, 
+                marker_ids
+            );
+
+            std::vector<cv::Vec3d> rvecs, tvecs;
+
+            cv::aruco::estimatePoseSingleMarkers(
+                marker_corners,
+                marker_length,
+                camera_matrix,
+                dist_coeffs,
+                rvecs,
+                tvecs
+            );
+
+            for (int i = 0; i < marker_ids.size(); i++) {
+                /* Draw pose estimation markers and other data on top of marker */
+                cv::aruco::drawAxis(frame, camera_matrix, dist_coeffs, rvecs[i], tvecs[i], 0.1f);
+
+                std::stringstream stream;
+                stream << "R: " << rvecs[i];
+                cv::putText(frame, stream.str(), marker_corners[i][0], cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1);
+                stream.clear();
+                stream.str("");
+                stream << "T: " << tvecs[i];
+                cv::putText(frame, stream.str(), cv::Point(marker_corners[i][0].x, marker_corners[i][0].y + 25), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1);
+            }
         }
 
+        /* Calculate FPS assuming no time is taken between frames (this is not the case due to waitkey) */
         clock_gettime(CLOCK_MONOTONIC, &end);
         wall_time = end.tv_sec - begin.tv_sec;
         wall_time += (end.tv_nsec - begin.tv_nsec) / 1000000000.00;
 
-        stringstream stream2;
+        std::stringstream stream2;
         stream2 << "fps: " << 1/wall_time;
-        putText(frame, stream2.str(), Point(40,40), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0), 1, LINE_AA);
+        cv::putText(frame, stream2.str(), cv::Point(40,40), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1, cv::LINE_AA);
 
-        imshow("Camera", frame);
-        waitKey(1);
+        /* Display processed frame */
+        cv::imshow("Camera", frame);
+        char c = cv::waitKey(1);
+        if (c == 'q')
+            break;
     }
 
     return 0;
