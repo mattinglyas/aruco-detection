@@ -63,12 +63,12 @@ int main(int argc, char ** argv) {
         if (argc > 2) {
             marker_length = std::stof(argv[2]);
 
-            if (argc > 3) {
-                input_filename = argv[3];
-            
+            if (argc > 4) {
+                read_width = std::atoi(argv[3]);
+                read_height = std::atoi(argv[4]);
+
                 if (argc > 5) {
-                    read_width = std::atoi(argv[4]);
-                    read_height = std::atoi(argv[5]);
+                    input_filename = argv[5];
                 }
             }
         }
