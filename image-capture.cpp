@@ -13,8 +13,8 @@ int main(int argc, char ** argv) {
         std::cerr << "ERROR: Could not open webcam" << std::endl;
         return 1;
     }
-    camera.set(cv::CAP_PROP_FRAME_WIDTH, 640);
-    camera.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+    camera.set(cv::CAP_PROP_FRAME_WIDTH, 1280);
+    camera.set(cv::CAP_PROP_FRAME_HEIGHT, 960);
     
     int num = 0;
 

@@ -89,6 +89,7 @@ int main(int argc, char ** argv) {
         /* Scale the camera matrix by the target resolution */
         double scale = double(read_width) / double(conf_width); 
         camera_matrix = camera_matrix * scale;
+        std::cout << "scaling camera matrix by " << scale << std::endl;
     } else {
         /* Assume same resolution as config */
         read_width = conf_width;
@@ -107,7 +108,7 @@ int main(int argc, char ** argv) {
         return 1;
     }
     
-    std::cout << "setting resolution to " << read_width " x " << read_height << std::endl;
+    std::cout << "setting resolution to " << read_width << " x " << read_height << std::endl;
     camera.set(cv::CAP_PROP_FRAME_WIDTH, read_width);
     camera.set(cv::CAP_PROP_FRAME_HEIGHT, read_height);
     
