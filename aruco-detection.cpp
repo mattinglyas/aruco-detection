@@ -107,6 +107,7 @@ int main(int argc, char ** argv) {
         return 1;
     }
     
+    std::cout << "setting resolution to " << read_width " x " << read_height << std::endl;
     camera.set(cv::CAP_PROP_FRAME_WIDTH, read_width);
     camera.set(cv::CAP_PROP_FRAME_HEIGHT, read_height);
     
