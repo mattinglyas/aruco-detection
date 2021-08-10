@@ -9,6 +9,8 @@
 #include <opencv2/core/utility.hpp>
 #include <opencv2/core/types.hpp>
 
+#include "aruco-kalman.h"
+
 #include <stdio.h>
 #include <iostream>
 #include <string.h>
@@ -33,7 +35,6 @@ static bool readCameraParameters(std::string filename, cv::Mat& camera_matrix, c
 }
 
 int main(int argc, char ** argv) {
-
     /*************************************************************************
      * Define parameters and constants
      * 
@@ -113,17 +114,29 @@ int main(int argc, char ** argv) {
     camera.set(cv::CAP_PROP_FRAME_HEIGHT, read_height);
     
     cv::namedWindow("Camera", cv::WINDOW_AUTOSIZE);
+
+    /*************************************************************************
+     * Set up kalman filters for each marker
+     *   using an array for o(1) access time, but costs more memory
+     * 
+     *************************************************************************/
+    cv::KalmanFilter kfs[250];
+    for (int i = 0; i < 250; i++) {
+        initKalmanFilter(kfs[i], 0);
+    }
     
     /*************************************************************************
      * Detect aruco markers and run pose estimation
      * 
      *************************************************************************/
 
+    double start;
+    double end;
+    double dt = 0;
+
     while(true) {
         /* Used in profiling performance */
-        struct timespec begin, end;
-        double wall_time;
-        clock_gettime(CLOCK_MONOTONIC, &begin);
+        start = (double)cv::getTickCount();
 
         cv::Mat frame;
         camera >> frame;
@@ -131,7 +144,6 @@ int main(int argc, char ** argv) {
         if (frame.empty()) {
             return 0;
         }
-
 
         std::vector<std::vector<cv::Point2f>> marker_corners, rejected_candidates;
         std::vector<int> marker_ids;
@@ -165,8 +177,25 @@ int main(int argc, char ** argv) {
             );
 
             for (int i = 0; i < marker_ids.size(); i++) {
+                int marker_id = marker_ids[i];
+                cv::KalmanFilter kf = kfs[marker_id];
+
+                updateTransitionMatrix(kf, dt);
+                cv::Mat translation_estimated(3, 1, CV_64F);
+                cv::Mat rotation_estimated(3, 3, CV_64F);
+                cv::Mat speed_estimated(3, 1, CV_64F);
+
+                predictKalmanFilter(kf, translation_estimated, rotation_estimated, speed_estimated);
+
+                cv::Mat measurements(6, 1, CV_64F);
+
+                fillMeasurements(measurements, tvecs[i], rvecs[i]);
+
+                updateKalmanFilter(kf, measurements, translation_estimated, rotation_estimated, speed_estimated);
+
+                /* TODO fix pose estimation */
                 /* Draw pose estimation markers and other data on top of marker */
-                cv::aruco::drawAxis(frame, camera_matrix, dist_coeffs, rvecs[i], tvecs[i], 0.1f);
+                cv::aruco::drawAxis(frame, camera_matrix, dist_coeffs, rvecs[i], translation_estimated, 0.1f);
 
                 std::stringstream stream;
                 stream << "R: " << rvecs[i];
@@ -179,12 +208,11 @@ int main(int argc, char ** argv) {
         }
 
         /* Calculate FPS assuming no time is taken between frames (this is not the case due to waitkey) */
-        clock_gettime(CLOCK_MONOTONIC, &end);
-        wall_time = end.tv_sec - begin.tv_sec;
-        wall_time += (end.tv_nsec - begin.tv_nsec) / 1000000000.00;
+        end = (double)cv::getTickCount();
+        dt = (end - start) / cv::getTickFrequency();
 
         std::stringstream stream2;
-        stream2 << "fps: " << 1/wall_time;
+        stream2 << "fps: " << 1/dt;
         cv::putText(frame, stream2.str(), cv::Point(40,40), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1, cv::LINE_AA);
 
         /* Display processed frame */

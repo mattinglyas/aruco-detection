@@ -1,0 +1,20 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/pi/Documents/aruco-detection/image-capture.cpp
+opencv2/opencv.hpp
+-
+opencv2/core.hpp
+-
+opencv2/video.hpp
+-
+opencv2/videoio.hpp
+-
+sstream
+-
+
