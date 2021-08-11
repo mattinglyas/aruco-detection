@@ -103,12 +103,7 @@ int main(int argc, char ** argv) {
         read_height = conf_height;
     }
 
-    cv::VideoCapture camera;
-    if (input_filename != nullptr) {
-        camera = cv::VideoCapture(input_filename);
-    } else {
-        camera = cv::VideoCapture(0);
-    }
+    cv::VideoCapture camera(0);
 
     if (!camera.isOpened()) {
         std::cerr << "ERROR: Could not open webcam" << std::endl;
