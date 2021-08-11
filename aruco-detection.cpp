@@ -46,6 +46,12 @@ int main(int argc, char ** argv) {
     int read_width = 0;
     int read_height = 0;
     float marker_length = DEF_MARKER_LENGTH;
+
+    /* drawing settings */
+    bool draw_pose = true;
+    bool draw_matrix = true;
+    bool draw_bounds = true;
+
     cv::Mat camera_matrix;
     cv::Mat dist_coeffs;
     
@@ -159,11 +165,14 @@ int main(int argc, char ** argv) {
 
         /* Draw and run pose estimation if markers were detected in frame */
         if (marker_ids.size() > 0) {
-            cv::aruco::drawDetectedMarkers(
-                frame, 
-                marker_corners, 
-                marker_ids
-            );
+            if (draw_bounds)
+            {
+                cv::aruco::drawDetectedMarkers(
+                    frame, 
+                    marker_corners, 
+                    marker_ids
+                );
+            }
 
             std::vector<cv::Vec3d> rvecs, tvecs;
 
@@ -197,22 +206,26 @@ int main(int argc, char ** argv) {
                 cv::Mat rotation_estimated_euler = rot2euler(rotation_estimated);
 
                 /* Draw pose estimation markers and other data on top of marker */
-                cv::aruco::drawAxis(frame, camera_matrix, dist_coeffs, rvecs[i], translation_estimated, 0.1f);
+                if (draw_pose)
+                    cv::aruco::drawAxis(frame, camera_matrix, dist_coeffs, rvecs[i], translation_estimated, 0.1f);
 
-                std::stringstream stream;
-                stream << "R: " << rvecs[i];
-                cv::putText(frame, stream.str(), cv::Point(marker_corners[i][2].x - 50, marker_corners[i][2].y + 20), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0), 3);
-                cv::putText(frame, stream.str(), cv::Point(marker_corners[i][2].x - 50, marker_corners[i][2].y + 20), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 255, 0), 1);
-                stream.clear();
-                stream.str("");
-                stream << "T: " << tvecs[i];
-                cv::putText(frame, stream.str(), cv::Point(marker_corners[i][2].x - 50, marker_corners[i][2].y + 50), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0), 3);
-                cv::putText(frame, stream.str(), cv::Point(marker_corners[i][2].x - 50, marker_corners[i][2].y + 50), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 255, 0), 1);
-                // stream.clear();
-                // stream.str("");
-                // stream << "T_e: " << translation_estimated;
-                // cv::putText(frame, stream.str(), cv::Point(marker_corners[i][0].x - 50, marker_corners[i][0].y + 60), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0), 3);
-                // cv::putText(frame, stream.str(), cv::Point(marker_corners[i][0].x - 50, marker_corners[i][0].y + 60), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 255, 0), 1);
+                if (draw_matrix)
+                {
+                    std::stringstream stream;
+                    stream << "R: " << std::setprecision(2) << rvecs[i];
+                    cv::putText(frame, stream.str(), cv::Point(marker_corners[i][2].x - 50, marker_corners[i][2].y + 20), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0), 3);
+                    cv::putText(frame, stream.str(), cv::Point(marker_corners[i][2].x - 50, marker_corners[i][2].y + 20), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(255, 255, 255), 2);
+                    stream.clear();
+                    stream.str("");
+                    stream << "T: " << std::setprecision(2) << tvecs[i];
+                    cv::putText(frame, stream.str(), cv::Point(marker_corners[i][2].x - 50, marker_corners[i][2].y + 50), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0), 3);
+                    cv::putText(frame, stream.str(), cv::Point(marker_corners[i][2].x - 50, marker_corners[i][2].y + 50), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(255, 255, 255), 2);
+                    // stream.clear();
+                    // stream.str("");
+                    // stream << "T_e: " << translation_estimated;
+                    // cv::putText(frame, stream.str(), cv::Point(marker_corners[i][0].x - 50, marker_corners[i][0].y + 60), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0), 3);
+                    // cv::putText(frame, stream.str(), cv::Point(marker_corners[i][0].x - 50, marker_corners[i][0].y + 60), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 255, 0), 1);
+                }
             }
         }
 
@@ -229,6 +242,12 @@ int main(int argc, char ** argv) {
         char c = cv::waitKey(1);
         if (c == 'q')
             break;
+        else if (c == 'm')
+            draw_matrix = !draw_matrix;
+        else if (c == 'p')
+            draw_pose = !draw_pose;
+        else if (c == 'b')
+            draw_bounds = !draw_bounds;
     }
 
     return 0;
