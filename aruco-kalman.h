@@ -9,7 +9,7 @@ void predictKalmanFilter( cv::KalmanFilter &kf,
                           cv::Mat &translation_estimated,
                           cv::Mat &rotation_estimated,
                           cv::Mat &speed_estimated);
-cv::Mat DoubleMatFromVec3b(cv::Vec3b in);
+cv::Mat Vec3b2Mat(cv::Vec3b in);
 cv::Mat rot2euler(const cv::Mat &rotationMatrix);
 cv::Mat euler2rot(const cv::Mat &euler);
 void fillMeasurements(cv::Mat &measurements,

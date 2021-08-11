@@ -67,7 +67,7 @@ void initKalmanFilter(cv::KalmanFilter &kf, double dt) {
     kf.init(18, 6, 0, CV_64F); // init kalman filter
 
     cv::setIdentity(kf.processNoiseCov, cv::Scalar::all(0.0001)); // process noise
-    cv::setIdentity(kf.measurementNoiseCov, cv::Scalar::all(0.001)); // measurement noise
+    cv::setIdentity(kf.measurementNoiseCov, cv::Scalar::all(0.0001)); // measurement noise
     cv::setIdentity(kf.errorCovPost, cv::Scalar::all(1)); // error covariance
 
     updateTransitionMatrix(kf, dt);
@@ -104,7 +104,8 @@ void predictKalmanFilter( cv::KalmanFilter &kf,
 }
 
 // Converts a given Rotation Matrix to Euler angles
-cv::Mat rot2euler(const cv::Mat & rotationMatrix) {
+cv::Mat rot2euler(const cv::Mat & rotationMatrix)
+{
     cv::Mat euler(3,1,CV_64F);
 
     double m00 = rotationMatrix.at<double>(0,0);
@@ -115,48 +116,49 @@ cv::Mat rot2euler(const cv::Mat & rotationMatrix) {
     double m20 = rotationMatrix.at<double>(2,0);
     double m22 = rotationMatrix.at<double>(2,2);
 
-    double x, y, z;
+    double bank, attitude, heading;
 
     // Assuming the angles are in radians.
     if (m10 > 0.998) { // singularity at north pole
-        x = 0;
-        y = CV_PI/2;
-        z = atan2(m02,m22);
+        bank = 0;
+        attitude = CV_PI/2;
+        heading = atan2(m02,m22);
     }
     else if (m10 < -0.998) { // singularity at south pole
-        x = 0;
-        y = -CV_PI/2;
-        z = atan2(m02,m22);
+        bank = 0;
+        attitude = -CV_PI/2;
+        heading = atan2(m02,m22);
     }
     else
     {
-        x = atan2(-m12,m11);
-        y = asin(m10);
-        z = atan2(-m20,m00);
+        bank = atan2(-m12,m11);
+        attitude = asin(m10);
+        heading = atan2(-m20,m00);
     }
 
-    euler.at<double>(0) = x;
-    euler.at<double>(1) = y;
-    euler.at<double>(2) = z;
+    euler.at<double>(0) = bank;
+    euler.at<double>(1) = attitude;
+    euler.at<double>(2) = heading;
 
     return euler;
 }
 
 // Converts a given Euler angles to Rotation Matrix
-cv::Mat euler2rot(const cv::Mat &euler) {
+cv::Mat euler2rot(const cv::Mat & euler)
+{
     cv::Mat rotationMatrix(3,3,CV_64F);
 
-    double x = euler.at<double>(0);
-    double y = euler.at<double>(1);
-    double z = euler.at<double>(2);
+    double bank = euler.at<double>(0);
+    double attitude = euler.at<double>(1);
+    double heading = euler.at<double>(2);
 
     // Assuming the angles are in radians.
-    double ch = cos(z);
-    double sh = sin(z);
-    double ca = cos(y);
-    double sa = sin(y);
-    double cb = cos(x);
-    double sb = sin(x);
+    double ch = cos(heading);
+    double sh = sin(heading);
+    double ca = cos(attitude);
+    double sa = sin(attitude);
+    double cb = cos(bank);
+    double sb = sin(bank);
 
     double m00, m01, m02, m10, m11, m12, m20, m21, m22;
 
@@ -181,10 +183,11 @@ cv::Mat euler2rot(const cv::Mat &euler) {
     rotationMatrix.at<double>(2,2) = m22;
 
     return rotationMatrix;
-} 
-cv::Mat DoubleMatFromVec3b(cv::Vec3b in)
+}
+
+cv::Mat Vec3b2Mat(cv::Vec3b in)
 {
-    cv::Mat mat(3,1, CV_64FC1);
+    cv::Mat mat(3,1, CV_64F);
     mat.at <double>(0,0) = in [0];
     mat.at <double>(1,0) = in [1];
     mat.at <double>(2,0) = in [2];
@@ -195,22 +198,14 @@ cv::Mat DoubleMatFromVec3b(cv::Vec3b in)
 void fillMeasurements(cv::Mat &measurements,
                       const cv::Vec3d translation_measured,
                       const cv::Vec3d rvec) {
-    // Convert rotation matrix to euler angles
-    cv::Mat measured_eulers(3, 1, CV_64F);
-    cv::Mat R(3, 3, CV_64F);
-
-    //cv::Rodrigues(rvec, R);
-    measured_eulers = rot2euler(R);
-
-   //cv2.Rodrigues(rotation_measured, measured_eulers);
     
     // Set measurement to predict
     measurements.at<double>(0) = translation_measured [0]; // x
     measurements.at<double>(1) = translation_measured [1]; // y
     measurements.at<double>(2) = translation_measured [2]; // z
-    measurements.at<double>(3) = measured_eulers.at<double>(0);      // roll
-    measurements.at<double>(4) = measured_eulers.at<double>(1);      // pitch
-    measurements.at<double>(5) = measured_eulers.at<double>(2);      // yaw
+    measurements.at<double>(3) = rvec [0];      // roll
+    measurements.at<double>(4) = rvec [1];      // pitch
+    measurements.at<double>(5) = rvec [2];      // yaw
 }
 
 void updateKalmanFilter(cv::KalmanFilter &KF,

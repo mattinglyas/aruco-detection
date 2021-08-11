@@ -191,19 +191,28 @@ int main(int argc, char ** argv) {
 
                 fillMeasurements(measurements, tvecs[i], rvecs[i]);
 
+                /* TODO find a way to reject bad pose estimations */
                 updateKalmanFilter(kf, measurements, translation_estimated, rotation_estimated, speed_estimated);
 
-                /* TODO fix pose estimation */
+                cv::Mat rotation_estimated_euler = rot2euler(rotation_estimated);
+
                 /* Draw pose estimation markers and other data on top of marker */
                 cv::aruco::drawAxis(frame, camera_matrix, dist_coeffs, rvecs[i], translation_estimated, 0.1f);
 
                 std::stringstream stream;
                 stream << "R: " << rvecs[i];
-                cv::putText(frame, stream.str(), marker_corners[i][0], cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1);
+                cv::putText(frame, stream.str(), cv::Point(marker_corners[i][0].x - 50, marker_corners[i][0].y), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0), 3);
+                cv::putText(frame, stream.str(), cv::Point(marker_corners[i][0].x - 50, marker_corners[i][0].y), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 255, 0), 1);
                 stream.clear();
                 stream.str("");
                 stream << "T: " << tvecs[i];
-                cv::putText(frame, stream.str(), cv::Point(marker_corners[i][0].x, marker_corners[i][0].y + 25), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1);
+                cv::putText(frame, stream.str(), cv::Point(marker_corners[i][0].x - 50, marker_corners[i][0].y + 30), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0), 3);
+                cv::putText(frame, stream.str(), cv::Point(marker_corners[i][0].x - 50, marker_corners[i][0].y + 30), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 255, 0), 1);
+                // stream.clear();
+                // stream.str("");
+                // stream << "T_e: " << translation_estimated;
+                // cv::putText(frame, stream.str(), cv::Point(marker_corners[i][0].x - 50, marker_corners[i][0].y + 60), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0), 3);
+                // cv::putText(frame, stream.str(), cv::Point(marker_corners[i][0].x - 50, marker_corners[i][0].y + 60), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 255, 0), 1);
             }
         }
 
