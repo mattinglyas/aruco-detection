@@ -201,13 +201,13 @@ int main(int argc, char ** argv) {
 
                 std::stringstream stream;
                 stream << "R: " << rvecs[i];
-                cv::putText(frame, stream.str(), cv::Point(marker_corners[i][0].x - 50, marker_corners[i][0].y), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0), 3);
-                cv::putText(frame, stream.str(), cv::Point(marker_corners[i][0].x - 50, marker_corners[i][0].y), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 255, 0), 1);
+                cv::putText(frame, stream.str(), cv::Point(marker_corners[i][2].x - 50, marker_corners[i][2].y + 20), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0), 3);
+                cv::putText(frame, stream.str(), cv::Point(marker_corners[i][2].x - 50, marker_corners[i][2].y + 20), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 255, 0), 1);
                 stream.clear();
                 stream.str("");
                 stream << "T: " << tvecs[i];
-                cv::putText(frame, stream.str(), cv::Point(marker_corners[i][0].x - 50, marker_corners[i][0].y + 30), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0), 3);
-                cv::putText(frame, stream.str(), cv::Point(marker_corners[i][0].x - 50, marker_corners[i][0].y + 30), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 255, 0), 1);
+                cv::putText(frame, stream.str(), cv::Point(marker_corners[i][2].x - 50, marker_corners[i][2].y + 50), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0), 3);
+                cv::putText(frame, stream.str(), cv::Point(marker_corners[i][2].x - 50, marker_corners[i][2].y + 50), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 255, 0), 1);
                 // stream.clear();
                 // stream.str("");
                 // stream << "T_e: " << translation_estimated;
