@@ -1,4 +1,0 @@
-/home/pi/Documents/aruco-detection/CMakeFiles/edit_cache.dir
-/home/pi/Documents/aruco-detection/CMakeFiles/aruco-detection.dir
-/home/pi/Documents/aruco-detection/CMakeFiles/rebuild_cache.dir
-/home/pi/Documents/aruco-detection/CMakeFiles/image-capture.dir
