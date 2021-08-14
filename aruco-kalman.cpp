@@ -2,6 +2,8 @@
 
 #include "aruco-kalman.h"
 #include <opencv2/calib3d.hpp>
+#include <iostream>
+#include <math.h>
 
 void updateTransitionMatrix(cv::KalmanFilter &kf, double dt) {
     // dynamic model
@@ -66,7 +68,7 @@ void updateTransitionMatrix(cv::KalmanFilter &kf, double dt) {
 void initKalmanFilter(cv::KalmanFilter &kf, double dt) {
     kf.init(18, 6, 0, CV_64F); // init kalman filter
 
-    cv::setIdentity(kf.processNoiseCov, cv::Scalar::all(0.0001)); // process noise
+    cv::setIdentity(kf.processNoiseCov, cv::Scalar::all(0.1)); // process noise
     cv::setIdentity(kf.measurementNoiseCov, cv::Scalar::all(0.0001)); // measurement noise
     cv::setIdentity(kf.errorCovPost, cv::Scalar::all(1)); // error covariance
 
@@ -103,7 +105,7 @@ void predictKalmanFilter( cv::KalmanFilter &kf,
     rotation_estimated = euler2rot(eulers_estimated);
 }
 
-// Converts a given Rotation Matrix to Euler angles
+// Converts a given Rotation Matrix to Euler angles (WARNING: MAY PRODUCE INCONSISTENT RESULTS AT CERTAIN ANGLES)
 cv::Mat rot2euler(const cv::Mat & rotationMatrix)
 {
     cv::Mat euler(3,1,CV_64F);
@@ -214,6 +216,32 @@ void updateKalmanFilter(cv::KalmanFilter &KF,
                         cv::Mat &rotation_estimated,
                         cv::Mat &speed_estimated) {
 
+    // // Get predicted values
+    // cv::Mat predicted = KF.predict();
+
+    // // calculate angle between predicted and measured rotation vector
+    // double x1 = predicted.at<double>(9);
+    // double y1 = predicted.at<double>(10);
+    // double z1 = predicted.at<double>(11);
+    // double x2 = measurement.at<double>(3);
+    // double y2 = measurement.at<double>(4);
+    // double z2 = measurement.at<double>(5);
+
+    // // from https://stackoverflow.com/questions/14066933/direct-way-of-computing-clockwise-angle-between-2-vectors
+    // double dot = x1 * x2 + y1 * y2 + z1 * z2;
+    // double lenSq1 = x1 * x1 + y1 * y1 + z1 * z1;
+    // double lenSq2 = x2 * x2 + y2 * y2 + z2 * z2;
+    // double angle = acos(dot / sqrt(lenSq1 * lenSq2));
+
+    // // discard the measurement in favor of the predicted value if the difference in angle is too large
+    // if (angle > M_PI * 15/16)
+    // {
+    //     //std::cout << "discarded rotation vector measurement with Δ " << angle << std::endl;
+    //     measurement.at<double>(3) = predicted.at<double>(9);
+    //     measurement.at<double>(4) = predicted.at<double>(10);
+    //     measurement.at<double>(5) = predicted.at<double>(11);
+    // }
+
     // The "correct" phase that is going to use the predicted value and our measurement
     cv::Mat estimated = KF.correct(measurement);
 
@@ -222,17 +250,13 @@ void updateKalmanFilter(cv::KalmanFilter &KF,
     translation_estimated.at<double>(1) = estimated.at<double>(1);
     translation_estimated.at<double>(2) = estimated.at<double>(2);
 
-    // Estimated euler angles
-    cv::Mat eulers_estimated(3, 1, CV_64F);
-    
-    eulers_estimated.at<double>(0) = estimated.at<double>(9);
-    eulers_estimated.at<double>(1) = estimated.at<double>(10);
-    eulers_estimated.at<double>(2) = estimated.at<double>(11);
+    // Estimated euler angles    
+    rotation_estimated.at<double>(0) = estimated.at<double>(9);
+    rotation_estimated.at<double>(1) = estimated.at<double>(10);
+    rotation_estimated.at<double>(2) = estimated.at<double>(11);
 
     // Estimated speed
     speed_estimated.at<double>(0) = estimated.at<double>(3);
     speed_estimated.at<double>(1) = estimated.at<double>(4);
     speed_estimated.at<double>(2) = estimated.at<double>(5);
-
-    rotation_estimated = euler2rot(eulers_estimated);
 }
